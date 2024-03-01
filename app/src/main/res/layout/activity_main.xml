@@ -1,0 +1,51 @@
+<!-- res/layout/activity_main.xml -->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingLeft="16dp"
+    android:paddingTop="16dp"
+    android:paddingRight="16dp"
+    android:paddingBottom="16dp"
+    tools:context=".MainActivity">
+
+    <Button
+        android:id="@+id/sosButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:layout_marginTop="20dp"
+        android:onClick="onSOSButtonClick"
+        android:text="SOS">
+
+    </Button>
+
+    <Switch
+        android:id="@+id/freefallSwitch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/freefall_detection"
+        android:layout_below="@id/sosButton"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"
+        tools:ignore="UseSwitchCompatOrMaterialXml">
+    </Switch>
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/freefallSwitch"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/recordingDetails"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Not recording"
+        android:layout_below="@id/progressBar"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="8dp" />
+</RelativeLayout>

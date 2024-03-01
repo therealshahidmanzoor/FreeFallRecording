@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">FreeFallRecording</string>
+    <string name="sos">SOS</string>
+    <string name="freefall_detection">Freefall Detection</string>
+    <string name="time_left_30_seconds">Time left: 30 seconds</string>
+    <string name="stop_recording">Stop Recording</string>
+</resources>
