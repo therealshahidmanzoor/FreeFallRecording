@@ -1,9 +1,8 @@
-package com.example.freefallrecording;// FreefallDetectionService.java
-
-import android.app.Notification;
+package com.example.freefallrecording;// FreeFallDetectionService.java
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -13,25 +12,24 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.IBinder;
+import android.widget.Toast;
 
-import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
-
-import java.text.DecimalFormat;
 
 public class FreeFallDetectionService extends android.app.Service implements SensorEventListener {
 
     private static final String CHANNEL_ID = "FreefallChannel";
+    private static final int NOTIFICATION_ID = 1; // Use a unique ID for each notification
+
     private SensorManager sensorManager;
-    private Sensor accelerometer;
 
     @Override
     public void onCreate() {
         super.onCreate();
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         if (sensorManager != null) {
-            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            Sensor accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
             if (accelerometer != null) {
                 sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
             }
@@ -65,28 +63,41 @@ public class FreeFallDetectionService extends android.app.Service implements Sen
 
             double accelerationReader = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2) + Math.pow(z, 2));
 
-            DecimalFormat precision = new DecimalFormat("0.00");
-            double roundedAcc = Double.parseDouble(precision.format(accelerationReader));
-
-            // Check for freefall condition
-            if (roundedAcc > 0.3d && roundedAcc < 0.5d){
+            if (accelerationReader > 0.3d && accelerationReader < 0.5d) {
+                Toast.makeText(this, "FreeFall Detected", Toast.LENGTH_SHORT).show();
                 sendFreefallNotification();
             }
         }
     }
 
-
     private void sendFreefallNotification() {
         // Create an explicit intent for the notification
         Intent notificationIntent = new Intent(this, MainActivity.class);
         notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_MUTABLE);
 
         // Create a notification channel (required for Android 8.0 and above)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        createNotificationChannel();
+
+        // Build the notification
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentTitle("Freefall Detected")
+                .setContentText("Your device is in freefall!")
+                .setContentIntent(pendingIntent)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setColor(Color.BLUE)
+                .setAutoCancel(true);
+
+        // Show the notification
+        NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, builder.build());
+    }
+
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             CharSequence name = "Freefall Channel";
             String description = "Channel for freefall notifications";
-            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            int importance = NotificationManager.IMPORTANCE_HIGH;
             NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
             channel.setDescription(description);
 
@@ -95,28 +106,5 @@ public class FreeFallDetectionService extends android.app.Service implements Sen
                 notificationManager.createNotificationChannel(channel);
             }
         }
-
-        // Build the notification
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
-                .setContentTitle("Freefall Detected")
-                .setContentText("Your device is in freefall!")
-                .setContentIntent(pendingIntent)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .setColor(Color.BLUE)
-                .setAutoCancel(true);
-
-        // Show the notification
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            return;
-        }
-        NotificationManagerCompat.from(this).notify(0, builder.build());
     }
 }

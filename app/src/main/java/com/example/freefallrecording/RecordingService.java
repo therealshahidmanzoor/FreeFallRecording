@@ -1,5 +1,7 @@
 package com.example.freefallrecording;
 
+import android.Manifest;
+import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -15,6 +17,7 @@ import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
+import android.provider.Settings;
 import android.text.Layout;
 import android.view.View;
 import android.widget.RemoteViews;
@@ -36,7 +39,8 @@ public class RecordingService extends android.app.Service {
     private static final int NOTIFICATION_ID = 1;
     private CountDownTimer countDownTimer;
     private long targetTime;
-
+    private static final int REQUEST_PERMISSION_CODE1
+            = 101;
     @Override
     public void onCreate() {
         super.onCreate();
@@ -69,49 +73,58 @@ public class RecordingService extends android.app.Service {
             return;
         }
 
-        String timestamp = String.valueOf(System.currentTimeMillis());
-        audioFilePath = getExternalFilesDir(Environment.DIRECTORY_MUSIC) + "/audio_record_" + timestamp + ".mp3";
+        // Check if notification permissions are granted
+        if (checkNotificationPermissions()) {
+            // Permissions are granted, proceed with recording
+            String timestamp = String.valueOf(System.currentTimeMillis());
+            audioFilePath = getExternalFilesDir(Environment.DIRECTORY_MUSIC) + "/audio_record_" + timestamp + ".mp3";
 
-        // Initialize and start the MediaRecorder
-        mediaRecorder = new MediaRecorder();
-        mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-        mediaRecorder.setOutputFile(audioFilePath);
-        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+            // Initialize and start the MediaRecorder
+            mediaRecorder = new MediaRecorder();
+            mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+            mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+            mediaRecorder.setOutputFile(audioFilePath);
+            mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
 
-        try {
-            mediaRecorder.prepare();
-            mediaRecorder.start();
-            Toast.makeText(this, "Recording started", Toast.LENGTH_SHORT).show();
-            // Schedule the handler to update the notification every second
-            Handler handler = new Handler();
-            handler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    updateNotification();
-                    handler.postDelayed(this, 1000); // Update every second
-                }
-            }, 1000);
+            try {
+                mediaRecorder.prepare();
+                mediaRecorder.start();
+                Toast.makeText(this, "Recording started", Toast.LENGTH_SHORT).show();
 
-            // Start a countdown timer for 30 seconds
-            countDownTimer = new CountDownTimer(30000, 1000) {
-                @Override
-                public void onTick(long millisUntilFinished) {
-                    // Update the target time every tick
-                    targetTime = System.currentTimeMillis() + millisUntilFinished;
-                    updateNotification();
-                }
+                // Schedule the handler to update the notification every second
+                Handler handler = new Handler();
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        updateNotification();
+                        handler.postDelayed(this, 1000); // Update every second
+                    }
+                }, 1000);
 
-                @Override
-                public void onFinish() {
-                    stopRecording();
-                }
-            }.start();
+                // Start a countdown timer for 30 seconds
+                countDownTimer = new CountDownTimer(30000, 1000) {
+                    @Override
+                    public void onTick(long millisUntilFinished) {
+                        // Update the target time every tick
+                        targetTime = System.currentTimeMillis() + millisUntilFinished;
+                        updateNotification();
+                    }
 
-        } catch (IOException e) {
-            e.printStackTrace();
+                    @Override
+                    public void onFinish() {
+                        stopRecording();
+                    }
+                }.start();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else {
+            // Permissions are not granted, request notification permissions
+            requestNotificationPermissions();
         }
     }
+
 
     private void stopRecording() {
         // Your stop recording logic here
@@ -153,10 +166,10 @@ public class RecordingService extends android.app.Service {
     }
 
     private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             CharSequence name = "Recording Channel";
             String description = "Channel for recording notifications";
-            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            int importance = NotificationManager.IMPORTANCE_HIGH;
             NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
             channel.setDescription(description);
 
@@ -167,40 +180,60 @@ public class RecordingService extends android.app.Service {
         }
     }
 
+
     private void updateNotification() {
         if (isRecording()) {
             long timeLeftMillis = targetTime - System.currentTimeMillis();
 
-            RemoteViews remoteViews = new RemoteViews(getPackageName(), R.layout.notification_layout);
-            remoteViews.setTextViewText(R.id.txtCountdown, "Time left: " + (timeLeftMillis / 1000) + " seconds");
-
-            // Create an explicit intent for the stop button
-            Intent stopIntent = new Intent(this, StopRecordingReceiver.class);
-            PendingIntent stopPendingIntent = PendingIntent.getBroadcast(this, 0, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-            remoteViews.setOnClickPendingIntent(R.id.btnStopRecording, stopPendingIntent);
-
-            // ... (rest of your notification code)
-
             NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                     .setSmallIcon(R.drawable.ic_launcher_foreground)
-                    .setCustomContentView(remoteViews)
-                    .setContentTitle("Safe Stree")
+                    .setContentTitle("Safe Street")
+                    .setContentText("Time left: " + (timeLeftMillis / 1000) + " seconds")
                     .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                     .setAutoCancel(false)
                     .setOngoing(true);
 
-            // ... (rest of your notification code)
-            if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
-                return;
+            // Create an explicit intent for the stop button
+            Intent stopIntent = new Intent(this, StopRecordingReceiver.class);
+            PendingIntent stopPendingIntent = PendingIntent.getBroadcast(this, 0, stopIntent, PendingIntent.FLAG_MUTABLE);
+            builder.addAction(R.drawable.ic_stop, "Stop Recording", stopPendingIntent);
+
+            // Set a notification channel if necessary
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                builder.setChannelId(CHANNEL_ID);
             }
+
             NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, builder.build());
         }
     }
+    private boolean checkNotificationPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            return NotificationManagerCompat.from(this).getNotificationChannel(CHANNEL_ID) != null;
+        } else {
+            // Notification permissions are always granted before Android O
+            return true;
+        }
+    }
+
+    private void requestNotificationPermissions() {
+        // You can guide the user to the notification settings or use your preferred method
+        Toast.makeText(this, "Please enable notification permissions in app settings", Toast.LENGTH_LONG).show();
+        ActivityCompat.requestPermissions(new Activity().getParent(),
+                new String[]{Manifest.permission.RECORD_AUDIO},
+                REQUEST_PERMISSION_CODE1);
+        openNotificationSettings();
+    }
+
+    private void openNotificationSettings() {
+        Intent intent = new Intent();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            intent.setAction(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+            intent.putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
+        } else {
+            intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            intent.setData(Uri.fromParts("package", getPackageName(), null));
+        }
+        startActivity(intent);
+    }
+
 }
