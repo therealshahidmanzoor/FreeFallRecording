@@ -9,6 +9,7 @@ import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.net.Uri;
@@ -41,9 +42,14 @@ public class RecordingService extends android.app.Service {
     private long targetTime;
     private static final int REQUEST_PERMISSION_CODE1
             = 101;
+    private static final int FOREGROUND_NOTIFICATION_ID = 1;
+
     @Override
     public void onCreate() {
         super.onCreate();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForeground(FOREGROUND_NOTIFICATION_ID, buildForegroundNotification());
+        }
         createNotificationChannel();
     }
 
@@ -65,7 +71,22 @@ public class RecordingService extends android.app.Service {
     public IBinder onBind(Intent intent) {
         return null;
     }
+    private Notification buildForegroundNotification() {
+        // Build your foreground notification here
+        // Create a notification channel (required for Android 8.0 and above)
+        createNotificationChannel();
 
+        // Build the notification
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentTitle("Freefall Detection Service")
+                .setContentText("Service is running")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setColor(Color.BLUE)
+                .setAutoCancel(true);
+
+        return builder.build();
+    }
     private void startRecording() {
         // Check if recording is already in progress
         if (isRecording()) {
@@ -166,7 +187,7 @@ public class RecordingService extends android.app.Service {
     }
 
     private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             CharSequence name = "Recording Channel";
             String description = "Channel for recording notifications";
             int importance = NotificationManager.IMPORTANCE_HIGH;
@@ -199,7 +220,7 @@ public class RecordingService extends android.app.Service {
             builder.addAction(R.drawable.ic_stop, "Stop Recording", stopPendingIntent);
 
             // Set a notification channel if necessary
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 builder.setChannelId(CHANNEL_ID);
             }
 

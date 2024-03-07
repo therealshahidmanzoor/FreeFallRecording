@@ -29,7 +29,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String PREFS_NAME = "MyPrefsFile";
     private static final String FREEFALL_SWITCH_STATE_KEY = "freefallSwitchState";
 
-    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
+//    @RequiresApi(api >= Build.VERSION_CODES.O)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -58,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
         sosButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     if (checkRecordingPermissions() && checkNotificationPermissions()) {
                         // Permissions are granted, start the RecordingService
                         startService(new Intent(MainActivity.this, RecordingService.class));
@@ -76,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 }
+
             }
         });
 
@@ -142,7 +143,6 @@ public class MainActivity extends AppCompatActivity {
         return ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO)
                 == PackageManager.PERMISSION_GRANTED;
     }
-    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     private boolean checkNotificationPermissions() {
         return ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.POST_NOTIFICATIONS)
                 == PackageManager.PERMISSION_GRANTED;
@@ -153,7 +153,6 @@ public class MainActivity extends AppCompatActivity {
                 new String[]{Manifest.permission.RECORD_AUDIO},
                 REQUEST_PERMISSION_CODE);
     }
-    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     private void requestNotificationPermissions() {
         ActivityCompat.requestPermissions(MainActivity.this,
                 new String[]{Manifest.permission.POST_NOTIFICATIONS},

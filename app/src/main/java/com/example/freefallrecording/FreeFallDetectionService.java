@@ -1,10 +1,10 @@
-package com.example.freefallrecording;// FreeFallDetectionService.java
+package com.example.freefallrecording;
+
+import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -20,7 +20,8 @@ import androidx.core.app.NotificationManagerCompat;
 public class FreeFallDetectionService extends android.app.Service implements SensorEventListener {
 
     private static final String CHANNEL_ID = "FreefallChannel";
-    private static final int NOTIFICATION_ID = 1; // Use a unique ID for each notification
+    private static final int FOREGROUND_NOTIFICATION_ID = 1;
+    private static final int FREEFALL_NOTIFICATION_ID = 2; // Use a unique ID for each notification
 
     private SensorManager sensorManager;
 
@@ -34,6 +35,11 @@ public class FreeFallDetectionService extends android.app.Service implements Sen
                 sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
             }
         }
+
+        // Start the service as a foreground service
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForeground(FOREGROUND_NOTIFICATION_ID, buildForegroundNotification());
+        }
     }
 
     @Override
@@ -43,7 +49,10 @@ public class FreeFallDetectionService extends android.app.Service implements Sen
             sensorManager.unregisterListener(this);
         }
     }
-
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        return START_STICKY;
+    }
     @Override
     public IBinder onBind(Intent intent) {
         return null;
@@ -89,12 +98,29 @@ public class FreeFallDetectionService extends android.app.Service implements Sen
                 .setColor(Color.BLUE)
                 .setAutoCancel(true);
 
-        // Show the notification
-        NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, builder.build());
+        // Show the freefall notification with a unique ID
+        NotificationManagerCompat.from(this).notify(FREEFALL_NOTIFICATION_ID, builder.build());
+    }
+
+    private Notification buildForegroundNotification() {
+        // Build your foreground notification here
+        // Create a notification channel (required for Android 8.0 and above)
+        createNotificationChannel();
+
+        // Build the notification
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentTitle("Freefall Detection Service")
+                .setContentText("Service is running")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setColor(Color.BLUE)
+                .setAutoCancel(true);
+
+        return builder.build();
     }
 
     private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             CharSequence name = "Freefall Channel";
             String description = "Channel for freefall notifications";
             int importance = NotificationManager.IMPORTANCE_HIGH;
