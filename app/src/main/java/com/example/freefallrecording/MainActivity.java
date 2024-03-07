@@ -13,9 +13,6 @@ import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.Switch;
 import android.widget.Toast;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -55,53 +52,47 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-        sosButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    if (checkRecordingPermissions() && checkNotificationPermissions()) {
-                        // Permissions are granted, start the RecordingService
-                        startService(new Intent(MainActivity.this, RecordingService.class));
+        sosButton.setOnClickListener(v -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (checkRecordingPermissions() && checkNotificationPermissions()) {
+                    // Permissions are granted, start the RecordingService
+                    startService(new Intent(MainActivity.this, RecordingService.class));
+                } else {
+                    // Permissions are not granted, request them or show a toast
+                    if (shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)
+                    && shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
+                        // Request permissions if the user hasn't denied with "Don't ask again"
+                        requestRecordingPermissions();
+                        requestNotificationPermissions();
                     } else {
-                        // Permissions are not granted, request them or show a toast
-                        if (shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)
-                        && shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
-                            // Request permissions if the user hasn't denied with "Don't ask again"
-                            requestRecordingPermissions();
-                            requestNotificationPermissions();
-                        } else {
-                            // Guide the user to app settings to enable permissions manually
-                            Toast.makeText(MainActivity.this, "Please enable recording permissions in app settings", Toast.LENGTH_LONG).show();
-                            openAppSettings();
-                        }
+                        // Guide the user to app settings to enable permissions manually
+                        Toast.makeText(MainActivity.this, "Please enable recording permissions in app settings", Toast.LENGTH_LONG).show();
+                        openAppSettings();
                     }
                 }
-
             }
+
         });
 
 // Add this method to open app settings
 
 
 
-        freefallSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                Intent serviceIntent = new Intent(MainActivity.this, FreeFallDetectionService.class);
-                if (isChecked) {
-                    // Start the service when the switch is checked
-                    Toast.makeText(MainActivity.this, String.valueOf(isChecked), Toast.LENGTH_SHORT).show();
-                    startService(serviceIntent);
-                } else {
-                    // Stop the service when the switch is unchecked
-                    Toast.makeText(MainActivity.this, String.valueOf(isChecked), Toast.LENGTH_SHORT).show();
+        freefallSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            Intent serviceIntent = new Intent(MainActivity.this, FreeFallDetectionService.class);
+            if (isChecked) {
+                // Start the service when the switch is checked
+                Toast.makeText(MainActivity.this, String.valueOf(isChecked), Toast.LENGTH_SHORT).show();
+                startService(serviceIntent);
+            } else {
+                // Stop the service when the switch is unchecked
+                Toast.makeText(MainActivity.this, String.valueOf(isChecked), Toast.LENGTH_SHORT).show();
 
-                    stopService(serviceIntent);
-                }
-
-                // Save the state of the freefallSwitch to SharedPreferences
-                saveFreefallSwitchState(isChecked);
+                stopService(serviceIntent);
             }
+
+            // Save the state of the freefallSwitch to SharedPreferences
+            saveFreefallSwitchState(isChecked);
         });
     }
 

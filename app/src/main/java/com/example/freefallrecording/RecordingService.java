@@ -37,12 +37,14 @@ public class RecordingService extends android.app.Service {
     private MediaPlayer mediaPlayer;
     private String audioFilePath;
     private static final String CHANNEL_ID = "RecordingChannel";
-    private static final int NOTIFICATION_ID = 1;
+    private static final int FOREGROUND_NOTIFICATION_ID = 2;
+
+    private static final int NOTIFICATION_ID = 2;
+
     private CountDownTimer countDownTimer;
     private long targetTime;
     private static final int REQUEST_PERMISSION_CODE1
             = 101;
-    private static final int FOREGROUND_NOTIFICATION_ID = 1;
 
     @Override
     public void onCreate() {

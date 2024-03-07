@@ -21,7 +21,7 @@ public class FreeFallDetectionService extends android.app.Service implements Sen
 
     private static final String CHANNEL_ID = "FreefallChannel";
     private static final int FOREGROUND_NOTIFICATION_ID = 1;
-    private static final int FREEFALL_NOTIFICATION_ID = 2; // Use a unique ID for each notification
+    private static final int FREEFALL_NOTIFICATION_ID = 3; // Use a unique ID for each notification
 
     private SensorManager sensorManager;
 
