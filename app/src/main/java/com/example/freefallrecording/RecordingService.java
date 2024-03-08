@@ -39,12 +39,9 @@ public class RecordingService extends android.app.Service {
     private static final String CHANNEL_ID = "RecordingChannel";
     private static final int FOREGROUND_NOTIFICATION_ID = 2;
 
-    private static final int NOTIFICATION_ID = 2;
-
     private CountDownTimer countDownTimer;
     private long targetTime;
-    private static final int REQUEST_PERMISSION_CODE1
-            = 101;
+    private static final int REQUEST_PERMISSION_CODE1 = 101;
 
     @Override
     public void onCreate() {
@@ -73,22 +70,55 @@ public class RecordingService extends android.app.Service {
     public IBinder onBind(Intent intent) {
         return null;
     }
+
     private Notification buildForegroundNotification() {
-        // Build your foreground notification here
         // Create a notification channel (required for Android 8.0 and above)
         createNotificationChannel();
+
+        // Create an explicit intent for the stop button
+        Intent stopIntent = new Intent(this, StopRecordingReceiver.class);
+        PendingIntent stopPendingIntent = PendingIntent.getBroadcast(this, 0, stopIntent, PendingIntent.FLAG_MUTABLE);
 
         // Build the notification
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
-                .setContentTitle("Freefall Detection Service")
-                .setContentText("Service is running")
+                .setContentTitle("Safe Stree")
+                .setContentText("Recording in progress")
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setColor(Color.BLUE)
-                .setAutoCancel(true);
+                .setAutoCancel(false)
+                .setOngoing(true)
+                .addAction(R.drawable.ic_stop, "Stop Recording", stopPendingIntent);
 
         return builder.build();
     }
+
+    private void updateNotification() {
+        if (isRecording()) {
+            long timeLeftMillis = targetTime - System.currentTimeMillis();
+
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setContentTitle("Safe Stree")
+                    .setContentText("Time left: " + (timeLeftMillis / 1000) + " seconds")
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .setAutoCancel(false)
+                    .setOngoing(true);
+
+            // Create an explicit intent for the stop button
+            Intent stopIntent = new Intent(this, StopRecordingReceiver.class);
+            PendingIntent stopPendingIntent = PendingIntent.getBroadcast(this, 0, stopIntent, PendingIntent.FLAG_MUTABLE);
+            builder.addAction(R.drawable.ic_stop, "Stop Recording", stopPendingIntent);
+
+            // Set a notification channel if necessary
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                builder.setChannelId(CHANNEL_ID);
+            }
+
+            NotificationManagerCompat.from(this).notify(FOREGROUND_NOTIFICATION_ID, builder.build());
+        }
+    }
+
     private void startRecording() {
         // Check if recording is already in progress
         if (isRecording()) {
@@ -148,7 +178,6 @@ public class RecordingService extends android.app.Service {
         }
     }
 
-
     private void stopRecording() {
         // Your stop recording logic here
         if (mediaRecorder != null) {
@@ -166,7 +195,7 @@ public class RecordingService extends android.app.Service {
         // Update notification one last time to show completion
         updateNotification();
         // Remove the notification after recording is complete
-        NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID);
+        NotificationManagerCompat.from(this).cancel(FOREGROUND_NOTIFICATION_ID);
     }
 
     private void playLastRecording() {
@@ -203,32 +232,6 @@ public class RecordingService extends android.app.Service {
         }
     }
 
-
-    private void updateNotification() {
-        if (isRecording()) {
-            long timeLeftMillis = targetTime - System.currentTimeMillis();
-
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-                    .setSmallIcon(R.drawable.ic_launcher_foreground)
-                    .setContentTitle("Safe Street")
-                    .setContentText("Time left: " + (timeLeftMillis / 1000) + " seconds")
-                    .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                    .setAutoCancel(false)
-                    .setOngoing(true);
-
-            // Create an explicit intent for the stop button
-            Intent stopIntent = new Intent(this, StopRecordingReceiver.class);
-            PendingIntent stopPendingIntent = PendingIntent.getBroadcast(this, 0, stopIntent, PendingIntent.FLAG_MUTABLE);
-            builder.addAction(R.drawable.ic_stop, "Stop Recording", stopPendingIntent);
-
-            // Set a notification channel if necessary
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                builder.setChannelId(CHANNEL_ID);
-            }
-
-            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, builder.build());
-        }
-    }
     private boolean checkNotificationPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             return NotificationManagerCompat.from(this).getNotificationChannel(CHANNEL_ID) != null;
@@ -258,5 +261,4 @@ public class RecordingService extends android.app.Service {
         }
         startActivity(intent);
     }
-
 }

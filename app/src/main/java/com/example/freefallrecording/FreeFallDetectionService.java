@@ -4,6 +4,7 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.hardware.Sensor;
@@ -22,21 +23,37 @@ public class FreeFallDetectionService extends android.app.Service implements Sen
 
     private static final String CHANNEL_ID = "FreefallChannel";
     private static final int FOREGROUND_NOTIFICATION_ID = 1;
-    private static final int FREEFALL_NOTIFICATION_ID = 3; // Use a unique ID for each notification
+    private static final int FREEFALL_NOTIFICATION_ID = 3;
 
     private SensorManager sensorManager;
+    private Sensor accelerometer;
+    private Sensor gyroscope;
+
+    private float[] gravityValues;
+    private float[] gyroscopeValues;
+
+    private static final float FREEFALL_THRESHOLD = 1.0f; // Adjust this threshold based on your requirements
 
     @Override
     public void onCreate() {
         super.onCreate();
         Log.d("FreeFallDetectionService", "Service created");
-        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+
+        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         if (sensorManager != null) {
-            Sensor accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+
             if (accelerometer != null) {
                 sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
             }
+            if (gyroscope != null) {
+                sensorManager.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_NORMAL);
+            }
         }
+
+        gravityValues = new float[3];
+        gyroscopeValues = new float[3];
 
         // Start the service as a foreground service
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -51,10 +68,10 @@ public class FreeFallDetectionService extends android.app.Service implements Sen
             sensorManager.unregisterListener(this);
         }
     }
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && intent.getAction() != null) {
-            // Check if the service is started by the BootReceiver
             if (intent.getAction().equals(Intent.ACTION_BOOT_COMPLETED)) {
                 // Handle the case when the system is restarted
                 // You may want to check the saved state or perform any necessary initialization
@@ -62,6 +79,7 @@ public class FreeFallDetectionService extends android.app.Service implements Sen
         }
         return START_STICKY;
     }
+
     @Override
     public IBinder onBind(Intent intent) {
         return null;
@@ -75,29 +93,32 @@ public class FreeFallDetectionService extends android.app.Service implements Sen
     @Override
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            double x = event.values[0];
-            double y = event.values[1];
-            double z = event.values[2];
+            gravityValues = event.values.clone();
+        } else if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
+            gyroscopeValues = event.values.clone();
+        }
 
-            double accelerationReader = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2) + Math.pow(z, 2));
+        float x = gravityValues[0];
+        float y = gravityValues[1];
+        float z = gravityValues[2];
 
-            if (accelerationReader > 0.3d && accelerationReader < 0.5d) {
-                Toast.makeText(this, "FreeFall Detected", Toast.LENGTH_SHORT).show();
-                sendFreefallNotification();
-            }
+        float acceleration = Math.abs(x) + Math.abs(y) + Math.abs(z);
+
+        float pitch = gyroscopeValues[1];
+
+        if (acceleration < FREEFALL_THRESHOLD && Math.abs(pitch) < 1.0f) {
+            Toast.makeText(this, "Freefall Detected", Toast.LENGTH_SHORT).show();
+            sendFreefallNotification();
         }
     }
 
     private void sendFreefallNotification() {
-        // Create an explicit intent for the notification
         Intent notificationIntent = new Intent(this, MainActivity.class);
         notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_MUTABLE);
 
-        // Create a notification channel (required for Android 8.0 and above)
         createNotificationChannel();
 
-        // Build the notification
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setContentTitle("Freefall Detected")
@@ -107,16 +128,12 @@ public class FreeFallDetectionService extends android.app.Service implements Sen
                 .setColor(Color.BLUE)
                 .setAutoCancel(true);
 
-        // Show the freefall notification with a unique ID
         NotificationManagerCompat.from(this).notify(FREEFALL_NOTIFICATION_ID, builder.build());
     }
 
     private Notification buildForegroundNotification() {
-        // Build your foreground notification here
-        // Create a notification channel (required for Android 8.0 and above)
         createNotificationChannel();
 
-        // Build the notification
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setContentTitle("Freefall Detection Service")
