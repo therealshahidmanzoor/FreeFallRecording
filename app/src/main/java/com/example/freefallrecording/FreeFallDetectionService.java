@@ -12,6 +12,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.IBinder;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
@@ -28,6 +29,7 @@ public class FreeFallDetectionService extends android.app.Service implements Sen
     @Override
     public void onCreate() {
         super.onCreate();
+        Log.d("FreeFallDetectionService", "Service created");
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         if (sensorManager != null) {
             Sensor accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
@@ -51,6 +53,13 @@ public class FreeFallDetectionService extends android.app.Service implements Sen
     }
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent != null && intent.getAction() != null) {
+            // Check if the service is started by the BootReceiver
+            if (intent.getAction().equals(Intent.ACTION_BOOT_COMPLETED)) {
+                // Handle the case when the system is restarted
+                // You may want to check the saved state or perform any necessary initialization
+            }
+        }
         return START_STICKY;
     }
     @Override
